@@ -4,6 +4,7 @@ import sys
 import json
 import pymongo
 import math
+import argparse
 
 from pymongo import MongoClient
 from bson.objectid import ObjectId
@@ -40,7 +41,14 @@ def angarea (points):
 mongo = MongoClient('localhost', 27017)
 ingresslog = mongo.ingressmu.ingressmu
 
-dt = json.loads(sys.argv[1])
+parser = argparse.ArgumentParser(description='Find split fields')
+parser.add_argument("-s", "--swap", dest="swap", action='store_true', help="Swap MU")
+parser.add_argument("plan", nargs='?',  action="store", help='drawtools json')
+args = parser.parse_args()
+
+#print "Plan: " + args.plan
+
+dt = json.loads(args.plan)
 
 for ff in dt:
 
@@ -55,24 +63,34 @@ for ff in dt:
 	#print query
 	res= ingresslog.find(query,None)
 	for rec in res:
+	#	print rec
 		ts = rec["timestamp"]
 
-#	print ts
+	print ts
 	tsl = ts - 5000
 	tsu = ts + 5000
 	query = { "$and" : [ {"$or" : [ {"data.points": { "$all" :  [ {"$elemMatch" : llE6[0]}, {"$elemMatch" : llE6[1]}]} }, {"data.points": { "$all" :  [ {"$elemMatch" : llE6[1]}, {"$elemMatch" : llE6[2]}]} }, {"data.points": { "$all" :  [ {"$elemMatch" : llE6[2]}, {"$elemMatch" : llE6[0]}]} } ]} , {"timestamp": { "$gt": tsl}}, {"timestamp": { "$lt": tsu}}  ]} 
-#	print query
+	#print query
 	res= ingresslog.find(query,None)
+	oid=[]	
+	mu=[]	
 	dt=[]
 	for rec in res:
 		print dumps(rec)
+		oid.append(rec['_id'])
+		mu.append(rec['mu'])
 		pts = rec['data']['points']
 		print angarea(pts) * 6367 * 6367
 		poly= {'type': 'polygon', 'color': '#c040c0', 'latLngs': e6points(pts)}
 		print json.dumps([poly])
 		dt.append(poly)
-
 		print 
 
+	print oid	
+	print mu
+		
+	if (args.swap and res.count()==2):
+		ingresslog.update_one({"_id": oid[0]},{"$set": { "mu": mu[1]} }, upsert=False)
+		ingresslog.update_one({"_id": oid[1]},{"$set": { "mu": mu[0]} }, upsert=False)
 		
 print json.dumps(dt)
