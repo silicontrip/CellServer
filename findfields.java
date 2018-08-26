@@ -53,7 +53,7 @@ public class findfields
 
         try
         {
-		String watchCell = new String (args[1]); //yeah null pointer exception if wrong arguments specified!
+		String watchCell = new String (args[0]); //yeah null pointer exception if wrong arguments specified!
 
                 mongo = new MongoClient("localhost", 27017);
                 db = mongo.getDatabase("ingressmu");
@@ -63,6 +63,9 @@ public class findfields
 
 
 		cursor = table.find().iterator();
+
+		Boolean first = true;
+		System.out.print("[");
 
 		while (cursor.hasNext()) {
                         Document entitycontent = cursor.next();
@@ -84,16 +87,23 @@ public class findfields
 			for (S2CellId cello: cells) {
 				if (watchCell.equals(cello.toToken()))
 				{
+					double area = thisField.getArea() * 6367 * 6367 ;
 
+					//System.out.println ("mu/km:" + score / area);
 					// determine mu/km
 					// convert to colour
 					// print field 
-					System.out.println(doctodt(capturedRegion,"#8040c0"));
+					if (first)
+						first = false;
+					else
+						System.out.print(",");
+					System.out.print(doctodt(capturedRegion,"#8040c0"));
 
 				}
 			}
 
 		}
+		System.out.println("]");
         }
         catch ( Exception e )
         {
