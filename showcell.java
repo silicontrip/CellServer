@@ -7,6 +7,7 @@ import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Iterator;
+import java.util.ArrayList;
 
 import org.json.*;
 import com.google.common.geometry.*;
@@ -89,44 +90,49 @@ public class showcell
 					cursor = table.find(findpoints).iterator();
 
 
-                while (cursor.hasNext()) {
-                        Document entitycontent = cursor.next();
-                        System.out.println(entitycontent);
-                }
+					while (cursor.hasNext()) {
+						Document entitycontent = cursor.next();
+						int mu = Integer.parseInt(entitycontent.getString("mu"));
+						S2Polygon fd = cs.getS2Field( (ArrayList<Document>) ((Document) entitycontent.get("data")).get("points"));
+						double area = fd.getArea() * 6367 * 6367;
+						System.out.println(entitycontent);
+						//System.out.println(fd);
+						System.out.println("MU: " + mu + " Area: " + area + " mu/km: " + mu/area);
+					}
 
 
 		//	    System.out.println( "" + response.toString(4) + "\n\r" );
-			UniformDistribution fieldmu = new UniformDistribution(0,0);
-			double min_mu = 0;
-			double max_mu = 0;
-			double total_area = 0;
-			for (Iterator<String> id= response.keys(); id.hasNext();)
-			{
-				String cellid = id.next();
-				JSONObject cell = response.getJSONObject(cellid);
-				total_area += cell.getDouble("area");
-				//System.out.println(cell);
-				if (cell.has("mu_min"))
-				{
-					UniformDistribution cellmu = new UniformDistribution(cell.getDouble("mu_min"),cell.getDouble("mu_max"));
-					System.out.print("" + cellid + ": " + cellmu + " x " + cell.getDouble("area") + " = ");
-					cellmu = cellmu.mul(cell.getDouble("area"));
-					//double cmin_mu = cell.getDouble("area") * cell.getDouble("mu_min");
-					//double cmax_mu = cell.getDouble("area") * cell.getDouble("mu_max");
-					//System.out.print("field: " + fieldmu + " + ");
-					System.out.println("" + cellmu);
-					fieldmu = fieldmu.add(cellmu);
-					//System.out.println(" =  " + fieldmu);
-					//min_mu += cmin_mu;
-					//max_mu += cmax_mu;
-				} else {
-					System.out.println("No Information for cell: " + cellid);
+					UniformDistribution fieldmu = new UniformDistribution(0,0);
+					double min_mu = 0;
+					double max_mu = 0;
+					double total_area = 0;
+					for (Iterator<String> id= response.keys(); id.hasNext();)
+					{
+						String cellid = id.next();
+						JSONObject cell = response.getJSONObject(cellid);
+						total_area += cell.getDouble("area");
+						//System.out.println(cell);
+						if (cell.has("mu_min"))
+						{
+							UniformDistribution cellmu = new UniformDistribution(cell.getDouble("mu_min"),cell.getDouble("mu_max"));
+							System.out.print("" + cellid + ": " + cellmu + " x " + cell.getDouble("area") + " = ");
+							cellmu = cellmu.mul(cell.getDouble("area"));
+							//double cmin_mu = cell.getDouble("area") * cell.getDouble("mu_min");
+							//double cmax_mu = cell.getDouble("area") * cell.getDouble("mu_max");
+							//System.out.print("field: " + fieldmu + " + ");
+							System.out.println("" + cellmu);
+							fieldmu = fieldmu.add(cellmu);
+							//System.out.println(" =  " + fieldmu);
+							//min_mu += cmin_mu;
+							//max_mu += cmax_mu;
+						} else {
+							System.out.println("No Information for cell: " + cellid);
+						}
+					}
+					System.out.println ("MU: "  + fieldmu+ " " + fieldmu.mean() + " +/- " + fieldmu.perror() * 100 + "% " + total_area + " km^2");
+					totalmu = totalmu.add(fieldmu);
 				}
-			}
-			System.out.println ("MU: "  + fieldmu+ " " + fieldmu.mean() + " +/- " + fieldmu.perror() * 100 + "% " + total_area + " km^2");
-			totalmu = totalmu.add(fieldmu);
-			}
-			System.out.println ("TotalMU: "  + totalmu+ " " + totalmu.mean() + " +/- " + totalmu.perror() * 100 + "%");
+				System.out.println ("TotalMU: "  + totalmu+ " " + totalmu.mean() + " +/- " + totalmu.perror() * 100 + "%");
                         }
 		}
         }
