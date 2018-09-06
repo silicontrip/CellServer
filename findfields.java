@@ -20,6 +20,63 @@ import com.mongodb.client.*;
 public class findfields
 {
 
+	private static String dhex (double d)
+	{
+		int i = (int) d;
+		if (i>255) i=255;
+		if (i<0) i=0;
+		return String.format("%02X",i);
+	}
+	
+	private static String hsv2rgb(double h, double s, double v)
+	{
+
+		while (h<0.0) h += 360.0;
+		while (h>360.0) h -= 360.0;
+		double r,g,b;
+		if (v < 0.0) 
+		{
+			r=0; g=0; b=0;
+		} else if ( s < 0.0 ) {
+			r=v; g=v; b=v;
+		} else {
+			double hf = h / 60.0;
+			int i = (int)hf;
+			double f = hf - i;
+			double pv = v * (1.0 - s);
+			double qv = v * (1.0 - s * f);
+			double tv = v * (1.0 -s * (1.0-f));
+			if (i==0||i==6) {
+				r = v;
+				g = tv;
+				b = pv;
+			} else if (i==1) {
+				r = qv;
+				g = v;
+				b = pv;
+			} else if (i==2) {
+				r = pv;
+				g = v;
+				b = tv;
+			} else if (i==3) {
+				r=pv;
+				g=qv;
+				b=v;
+			} else if (i==4) {
+				r=tv;
+				g=pv;
+				b=v;
+			} else if (i==5||i==-1) {
+				r=v;
+				g=pv;
+				b=qv;
+			} else {
+				r=v; g=v; b=v;
+			}
+		}
+		return new String ("#" + dhex(r) + dhex(g) + dhex(b));
+	}
+
         private static String doctodt(ArrayList<Document> points,String colour)
         {
                 Document vertexA = (Document) points.get(0);
@@ -65,7 +122,9 @@ public class findfields
 		cursor = table.find().iterator();
 
 		Boolean first = true;
-		System.out.print("[");
+
+		StringBuffer dtstr= new StringBuffer("[");
+
 
 		while (cursor.hasNext()) {
                         Document entitycontent = cursor.next();
@@ -89,21 +148,25 @@ public class findfields
 				{
 					double area = thisField.getArea() * 6367 * 6367 ;
 
-					//System.out.println ("mu/km:" + score / area);
+					String colour = hsv2rgb(score / area / 10.0,1.0,1.0);
+					System.out.print ("[" + doctodt(capturedRegion,colour) + "] ");
+					System.out.println ("mu: " + score + " km:" + area + " mu/km:" + score / area);
 					// determine mu/km
 					// convert to colour
 					// print field 
 					if (first)
 						first = false;
 					else
-						System.out.print(",");
-					System.out.print(doctodt(capturedRegion,"#8040c0"));
+						dtstr.append(",");
+					dtstr.append(doctodt(capturedRegion,colour));
 
 				}
 			}
 
 		}
-		System.out.println("]");
+		dtstr.append("]");
+		System.out.println("");
+		System.out.println(dtstr);
         }
         catch ( Exception e )
         {
