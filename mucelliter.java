@@ -137,7 +137,6 @@ public class mucelliter {
 						{
 							watchOn = true;
 
-
 							System.out.println("analysing: " + entitycontent.get("_id") +" [" + doctodt(capturedRegion) + "]");
 							ArrayList<Document> ent = (ArrayList<Document>) entitycontent.get("ent"); 
 							String cdate = new String("" + ent.get(1)); Date creation= new Date(Long.parseLong(cdate));
@@ -166,13 +165,11 @@ public class mucelliter {
 								{
 									UniformDistribution cma = cellmu.mul(area);
 									mus = mus.sub(cma);
-
 									if (watchOn)
 									{
 									System.out.print( celli.toToken() );
 									System.out.println(" - " + cma + " (" + cellmu + " x " + area + ") = " + mus);
 									}
-
 		
 								}
 								else

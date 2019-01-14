@@ -450,6 +450,12 @@ ingresslog.replace_one(query,muobj,upsert=True)
         return jobj;
     }
 
+	public JSONObject cellalize (S2Polygon s2Field)
+	{
+                S2CellUnion cells = getCellsForField(s2Field);
+                return getIntersectionMU(cells,s2Field);
+	}
+
 	public JSONObject cellalize (JSONObject field)
 	{
 		if (field.has("latLngs"))
@@ -458,11 +464,7 @@ ingresslog.replace_one(query,muobj,upsert=True)
 			if (latlng.length() == 3)
 			{
             //System.out.println( m_num + " JSON: " + latlng );
-                S2Polygon thisField = getS2Field(latlng);
-                S2CellUnion cells = getCellsForField(thisField);
-                // get mu for intersects cell
-
-                return getIntersectionMU(cells,thisField);
+			return cellalize(getS2Field(latlng));
 			}
 		}
 		return new JSONObject();

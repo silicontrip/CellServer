@@ -97,8 +97,6 @@ public class UniformDistribution {
 	public UniformDistribution round()  {
 		return new UniformDistribution(this.getUpperRound(),this.getLowerRound());
 	}
-	
-	
 
 	public boolean refine (UniformDistribution a) throws ArithmeticException { 
 
