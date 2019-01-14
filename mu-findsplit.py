@@ -62,35 +62,36 @@ for ff in dt:
 	query = {"data.points": { "$all" :  [ {"$elemMatch" : llE6[0]}, {"$elemMatch" : llE6[1]}, {"$elemMatch" : llE6[2]}]}} 
 	#print query
 	res= ingresslog.find(query,None)
+	# what to do if multiple found...
 	for rec in res:
-	#	print rec
+#		print rec
 		ts = rec["timestamp"]
 
-	print ts
-	tsl = ts - 500
-	tsu = ts + 500
-	query = { "$and" : [ {"$or" : [ {"data.points": { "$all" :  [ {"$elemMatch" : llE6[0]}, {"$elemMatch" : llE6[1]}]} }, {"data.points": { "$all" :  [ {"$elemMatch" : llE6[1]}, {"$elemMatch" : llE6[2]}]} }, {"data.points": { "$all" :  [ {"$elemMatch" : llE6[2]}, {"$elemMatch" : llE6[0]}]} } ]} , {"timestamp": { "$gt": tsl}}, {"timestamp": { "$lt": tsu}}  ]} 
-	#print query
-	res= ingresslog.find(query,None)
-	oid=[]	
-	mu=[]	
-	dt=[]
-	for rec in res:
-		print dumps(rec)
-		oid.append(rec['_id'])
-		mu.append(rec['mu'])
-		pts = rec['data']['points']
-		print angarea(pts) * 6367 * 6367
-		poly= {'type': 'polygon', 'color': '#c040c0', 'latLngs': e6points(pts)}
-		print json.dumps([poly])
-		dt.append(poly)
-		print 
+		print ts
+		tsl = ts - 800
+		tsu = ts + 800
+		query = { "$and" : [ {"$or" : [ {"data.points": { "$all" :  [ {"$elemMatch" : llE6[0]}, {"$elemMatch" : llE6[1]}]} }, {"data.points": { "$all" :  [ {"$elemMatch" : llE6[1]}, {"$elemMatch" : llE6[2]}]} }, {"data.points": { "$all" :  [ {"$elemMatch" : llE6[2]}, {"$elemMatch" : llE6[0]}]} } ]} , {"timestamp": { "$gt": tsl}}, {"timestamp": { "$lt": tsu}}  ]} 
+		#print query
+		res= ingresslog.find(query,None)
+		oid=[]	
+		mu=[]	
+		dt=[]
+		for rec in res:
+			print dumps(rec)
+			oid.append(rec['_id'])
+			mu.append(rec['mu'])
+			pts = rec['data']['points']
+			print angarea(pts) * 6367 * 6367
+			poly= {'type': 'polygon', 'color': '#c040c0', 'latLngs': e6points(pts)}
+			print json.dumps([poly])
+			dt.append(poly)
+			print 
 
-	print oid	
-	print mu
+		print oid	
+		print mu
 		
-	if (args.swap and res.count()==2):
-		ingresslog.update_one({"_id": oid[0]},{"$set": { "mu": mu[1]} }, upsert=False)
-		ingresslog.update_one({"_id": oid[1]},{"$set": { "mu": mu[0]} }, upsert=False)
+		if (args.swap and res.count()==2):
+			ingresslog.update_one({"_id": oid[0]},{"$set": { "mu": mu[1]} }, upsert=False)
+			ingresslog.update_one({"_id": oid[1]},{"$set": { "mu": mu[0]} }, upsert=False)
 		
-print json.dumps(dt)
+	print json.dumps(dt)

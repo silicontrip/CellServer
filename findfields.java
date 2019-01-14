@@ -22,7 +22,7 @@ public class findfields
 
 	private static String dhex (double d)
 	{
-		int i = (int) d;
+		int i = (int) (d * 255.0) ;
 		if (i>255) i=255;
 		if (i<0) i=0;
 		return String.format("%02X",i);
@@ -46,6 +46,7 @@ public class findfields
 			double pv = v * (1.0 - s);
 			double qv = v * (1.0 - s * f);
 			double tv = v * (1.0 -s * (1.0-f));
+//System.out.println("i: " + i + " hf: " + hf + " f: " + f + " pv: " + pv + " qv: " + qv + " tv: "+ tv);
 			if (i==0||i==6) {
 				r = v;
 				g = tv;
@@ -74,6 +75,7 @@ public class findfields
 				r=v; g=v; b=v;
 			}
 		}
+		//System.out.println("R: " + r + " G: " + g + " B: " + b);
 		return new String ("#" + dhex(r) + dhex(g) + dhex(b));
 	}
 
@@ -149,8 +151,9 @@ public class findfields
 					double area = thisField.getArea() * 6367 * 6367 ;
 
 					String colour = hsv2rgb(score / area / 10.0,1.0,1.0);
-					System.out.print ("[" + doctodt(capturedRegion,colour) + "] ");
-					System.out.println ("mu: " + score + " km:" + area + " mu/km:" + score / area);
+					//System.out.println ("mu: " + score + " km:" + area + " mu/km:" + score / area);
+					System.out.format ("%6d mu.  %10.3f km. %10.6f mu/km : " , score,area,score / area);
+					System.out.println ("[" + doctodt(capturedRegion,colour) + "] ");
 					// determine mu/km
 					// convert to colour
 					// print field 

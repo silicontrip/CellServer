@@ -46,6 +46,9 @@ public class UniformDistribution {
 	public double getUpper() { return upper; }
 	public double getLower() { return lower; }
 
+	public double getUpperRound() { return Math.round(upper); }
+	public double getLowerRound() { return Math.round(lower); }
+
 	public void clampLower(double d) { if (lower < d) lower=d; }
 
 	public double mean () { return (upper + lower) / 2.0; }
@@ -90,6 +93,12 @@ public class UniformDistribution {
 
 		return (lower == a.getLower() && upper == a.getUpper()); 
 	}
+
+	public UniformDistribution round()  {
+		return new UniformDistribution(this.getUpperRound(),this.getLowerRound());
+	}
+	
+	
 
 	public boolean refine (UniformDistribution a) throws ArithmeticException { 
 
