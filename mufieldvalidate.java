@@ -26,6 +26,27 @@ public class mufieldvalidate
         throw new NumberFormatException("Object doesn't contain lat/lng");
     }
 
+	private static String doctodt(ArrayList<Document> points)
+        {
+                Document vertexA = (Document) points.get(0);
+                Document vertexB = (Document) points.get(1);
+                Document vertexC = (Document) points.get(2);
+
+                Integer latE6A = (Integer)vertexA.get("latE6");
+                Integer lngE6A = (Integer)vertexA.get("lngE6");
+                Integer latE6B = (Integer)vertexB.get("latE6");
+                Integer lngE6B = (Integer)vertexB.get("lngE6");
+                Integer latE6C = (Integer)vertexC.get("latE6");
+                Integer lngE6C = (Integer)vertexC.get("lngE6");
+
+                return new String ("{\"type\":\"polygon\",\"color\":\"#a24ac3\",\"latLngs\":[" +
+                                        "{\"lat\":" + latE6A/1000000.0 + ",\"lng\":"+lngE6A/1000000.0+"},"+
+                                        "{\"lat\":" + latE6B/1000000.0 + ",\"lng\":"+lngE6B/1000000.0+"},"+
+                                        "{\"lat\":" + latE6C/1000000.0 + ",\"lng\":"+lngE6C/1000000.0+"}"+
+                                        "]}");
+
+        }
+
     public static void main(String[] args)
     {
         try
@@ -46,6 +67,8 @@ public class mufieldvalidate
 
 		cursor = table.find().iterator();
 
+		int count = 0;
+		int timetime = (int)(System.nanoTime() / 1000000000.0);
 // loop all fields
 		while (cursor.hasNext()) {
                         Document entitycontent = cursor.next();
@@ -92,6 +115,12 @@ public class mufieldvalidate
 				System.out.println ("score: " + score + " -> " + fieldmu);
 			}
 
+			if (timetime != (int)(System.nanoTime() / 1000000000.0))
+			{
+				timetime = (int)(System.nanoTime() /1000000000.0);
+				System.out.println("" + count + " ("+timetime+") " + "score: " + score + " -> " + fieldmu + " : " + doctodt(capturedRegion) );
+			}
+			count++;
 		}
 	} catch (Exception e) {
 	            System.out.println( " Error: " + e.toString() );
