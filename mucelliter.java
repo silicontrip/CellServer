@@ -71,7 +71,11 @@ public class mucelliter {
 		rc.setMaxCells(20);	
 
 		for (S2CellId cell: multi.keySet())
+		{
+			if (watchCell.equals(cell.toToken()))
+				System.out.println("CELL: " + multi.get(cell)); 
 			multi2.put(cell, multi.get(cell));
+		}
 
 		while (cursor.hasNext()) {
 			Document entitycontent = cursor.next();
@@ -132,12 +136,13 @@ public class mucelliter {
 						if (watchCell.equals(cello.toToken()))
 						{
 							watchOn = true;
-/*
+
 							System.out.println("analysing: " + entitycontent.get("_id") +" [" + doctodt(capturedRegion) + "]");
-							ArrayList<Document> ent = (ArrayList<Document>) entitycontent.get("ent"); String cdate = new String("" + ent.get(1)); Date creation= new Date(Long.parseLong(cdate));
+							ArrayList<Document> ent = (ArrayList<Document>) entitycontent.get("ent"); 
+							String cdate = new String("" + ent.get(1)); Date creation= new Date(Long.parseLong(cdate));
 							System.out.println("ts = " +  ent.get(1) + " " + creation);
 							System.out.println("" + cello.toToken() + " : " + mus  + " mu " + mus.div(totalArea) +" mu/km");
-*/
+
 						}
 					
 						// loop through field cells
@@ -160,20 +165,18 @@ public class mucelliter {
 								{
 									UniformDistribution cma = cellmu.mul(area);
 									mus = mus.sub(cma);
-/*
 									if (watchOn)
 									{
 									System.out.print( celli.toToken() );
 									System.out.println(" - " + cma + " (" + cellmu + " x " + area + ") = " + mus);
 									}
-*/
 		
 								}
 								else
 								{
 									mus.setLower(0.0);
-							//		if (watchOn)
-							//			System.out.println("" + celli.toToken() + " undef = " + mus );
+									if (watchOn)
+										System.out.println("" + celli.toToken() + " undef = " + mus );
 								}
 								
 							}	
@@ -199,7 +202,8 @@ public class mucelliter {
 						if (cellomu == null)
 						{
 							cellomu = mus;
-							//System.err.println("NEW: " + cello.toToken() + " : " + cellomu);
+							if (watchOn)
+								System.err.println("NEW: " + cello.toToken() + " : " + cellomu);
 						}
 						else 
 						{
@@ -207,7 +211,8 @@ public class mucelliter {
 								UniformDistribution oldcell = new UniformDistribution(cellomu);
 								if (cellomu.refine(mus))
 								{
-									//System.err.println("UPD: " + cello.toToken() + " : " + cellomu);
+									if (watchOn) 
+										System.err.println("UPD: " + cello.toToken() + " : " + cellomu);
 									;
 								}
 								if (watchOn && !oldcell.equals(cellomu))

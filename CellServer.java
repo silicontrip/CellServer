@@ -173,41 +173,86 @@ ingresslog.replace_one(query,muobj,upsert=True)
 
 	}
 
+	public HashMap<S2CellId,UniformDistribution> getAllCells()
+	{
+		HashMap<S2CellId,UniformDistribution> cellStats = new HashMap<S2CellId,UniformDistribution>();
+		//HashMap<String,UniformDistribution> cellStats = new HashMap<String,UniformDistribution>();
+		MongoDatabase db;
+                MongoCursor<Document> cursor;
+                MongoCollection<org.bson.Document> table;
+
+                db = m_mudb.getDatabase("ingressmu");
+                table = db.getCollection("mu");	
+
+		cursor= table.find().iterator();
+
+		while(cursor.hasNext()) {
+			Document cellmu = cursor.next();
+			ArrayList<Double> lh = (ArrayList<Double>)cellmu.get("mu");
+			UniformDistribution mu =  new UniformDistribution(lh.get(0),lh.get(1));
+			//String id = new String ("0x" + (String)cellmu.get("cell"));
+			S2CellId cell = S2CellId.fromToken((String)cellmu.get("cell"));
+			cellStats.put(cell,mu);
+			//cellStats.put((String)cellmu.get("cell"),mu);
+		}
+		return cellStats;
+	}
+
+    public UniformDistribution getCell(S2CellId cell)
+	{
+		MongoDatabase db;
+		MongoCursor<Document> cursor;
+		MongoCollection<org.bson.Document> table;
+
+		db = m_mudb.getDatabase("ingressmu");
+		table = db.getCollection("mu");
+		BasicDBObject findcells = new BasicDBObject("cell", cell.toToken());
+
+		cursor = table.find(findcells).iterator();
+
+        //if (m_mudb.has(cell.toToken()))
+		if(cursor.hasNext())
+		{
+		    Document cellmu = cursor.next();
+		    ArrayList<Double> lh = (ArrayList<Double>)cellmu.get("mu");
+		    return new UniformDistribution(lh.get(0),lh.get(1));
+		}
+		return null;
+	}
+
+
+	public UniformDistribution getAveChildMU(S2CellId cell)
+	{
+		if (cell.level() < 13)
+		{
+		    S2CellId id = cell.childBegin();
+			UniformDistribution ttmu = new UniformDistribution (0,0);
+		    for (int pos = 0; pos < 4; ++pos, id = id.next())
+			{
+				UniformDistribution mu = getMU(id);
+				if (mu == null)
+					return null;
+				ttmu = ttmu.add(mu);
+			}
+            
+		    return ttmu.div(4.0);
+		}
+		return null;
+	}
     public UniformDistribution getMU(S2CellId cell)
     {
 
-        MongoDatabase db;
-        MongoCursor<Document> cursor;
-        MongoCollection<org.bson.Document> table;
+	UniformDistribution cellmu = getCell(cell);
+	UniformDistribution childmu = getAveChildMU(cell);
 
-        db = m_mudb.getDatabase("ingressmu");
-        table = db.getCollection("mu");
-        BasicDBObject findcells = new BasicDBObject("cell", cell.toToken());
+	if (childmu == null)
+		return cellmu;
+	if (cellmu == null)
+		return childmu;
+	if (childmu.perror() > cellmu.perror())
+		return cellmu;
 
-        cursor = table.find(findcells).iterator();
-
-        //if (m_mudb.has(cell.toToken()))
-        if(cursor.hasNext())
-        {
-            Document cellmu = cursor.next();
-            ArrayList<Double> lh = (ArrayList<Double>)cellmu.get("mu");
-	    return new UniformDistribution(lh.get(0),lh.get(1));
-        }
-        if (cell.level() < 13)
-        {
-            S2CellId id = cell.childBegin();
-            UniformDistribution ttmu = new UniformDistribution (0,0);
-            for (int pos = 0; pos < 4; ++pos, id = id.next())
-		{
-			UniformDistribution mu = getMU(id);
-			if (mu == null)
-				return null;
-			ttmu = ttmu.add(getMU(id));
-		}
-            
-            return ttmu.div(4.0);
-        }
-        return null;
+	return childmu;
     }
 
     public JSONObject getIntersectionMU(S2CellUnion cells,S2Polygon thisField)
@@ -419,7 +464,7 @@ ingresslog.replace_one(query,muobj,upsert=True)
 			if (latlng.length() == 3)
 			{
             //System.out.println( m_num + " JSON: " + latlng );
-return cellalize(getS2Field(latlng));
+			return cellalize(getS2Field(latlng));
 			}
 		}
 		return new JSONObject();
