@@ -82,6 +82,13 @@ public class UniformDistribution {
 
 	}
 
+	public boolean contains(Integer n) { return lower <= n && n <= upper; }
+	public boolean contains(Double n) { return lower <= n && n <= upper; }
+	// we shouldn't have an invalid UD where lower > upper
+	public boolean contains(UniformDistribution n) { return lower <= n.getLower() && n.getUpper() <= upper; }
+
+
+
 	// anything else is false or uncertain.
 	public boolean gt (UniformDistribution a) { return lower > a.getUpper(); }
 	public boolean lt (UniformDistribution a) { return upper < a.getLower(); }
@@ -94,8 +101,12 @@ public class UniformDistribution {
 		return (lower == a.getLower() && upper == a.getUpper()); 
 	}
 
-	public UniformDistribution round()  {
-		return new UniformDistribution(this.getUpperRound(),this.getLowerRound());
+	public UniformDistribution round()  { return new UniformDistribution(this.getUpperRound(),this.getLowerRound()); }
+	public UniformDistribution roundAboveZero()  { 
+		double l = getLowerRound(); if (l==0) l=1;
+		double u = getUpperRound(); if (u==0) u=1;
+	
+		return new UniformDistribution(l,u);
 	}
 
 	public boolean refine (UniformDistribution a) throws ArithmeticException { 

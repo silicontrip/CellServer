@@ -130,7 +130,7 @@ public class showcell
 						}
 					}
 					System.out.println ("MU: "  + fieldmu+ " " + fieldmu.mean() + " +/- " + fieldmu.perror() * 100 + "% " + total_area + " km^2");
-					System.out.println ("Real MU: "  + fieldmu.round());
+					System.out.println ("Real MU: "  + fieldmu.roundAboveZero());
 					totalmu = totalmu.add(fieldmu.round());
 				}
 				System.out.println ("TotalMU: "  + totalmu+ " " + totalmu.mean() + " +/- " + totalmu.perror() * 100 + "%");
