@@ -146,7 +146,7 @@ public class CellServer
 	public ArrayList<Document> findSplitField(Document field)
 	{
 	
-		Integer searchTime =  field.getInteger("timestamp");
+		Long searchTime =  field.getLong("timestamp");
 		Document data = (Document) field.get("data");
 		ArrayList<Document> capturedRegion = (ArrayList<Document>) data.get("points");
 
@@ -154,11 +154,14 @@ public class CellServer
 			
 	}
 
-	public ArrayList<Document> findSplitField(ArrayList<Document> pointlist, Integer timeLower, Integer timeUpper)
+	public ArrayList<Document> findSplitField(ArrayList<Document> pointlist, Long timeLower, Long timeUpper)
 	{
 		Document p1 = pointlist.get(0);
+		p1.remove("guid");
 		Document p2 = pointlist.get(1);
+		p2.remove("guid");
 		Document p3 = pointlist.get(2);
+		p3.remove("guid");
 
 		BasicDBObject match1 = new BasicDBObject("$elemMatch",p1);
 		BasicDBObject match2 = new BasicDBObject("$elemMatch",p2);
@@ -177,9 +180,9 @@ public class CellServer
 		allMatch31.add(match1);
 
 		BasicDBList anyPoints = new BasicDBList();
-		anyPoints.add(new BasicDBObject("data.points",allMatch12));
-		anyPoints.add(new BasicDBObject("data.points",allMatch23));
-		anyPoints.add(new BasicDBObject("data.points",allMatch31));
+		anyPoints.add(new BasicDBObject("data.points",new BasicDBObject("$all",allMatch12)));
+		anyPoints.add(new BasicDBObject("data.points",new BasicDBObject("$all",allMatch23)));
+		anyPoints.add(new BasicDBObject("data.points",new BasicDBObject("$all",allMatch31)));
 
 		BasicDBList timeAndPoints = new BasicDBList();
 		timeAndPoints.add(new BasicDBObject("$or",anyPoints));
@@ -187,6 +190,8 @@ public class CellServer
 		timeAndPoints.add(new BasicDBObject("timestamp", new BasicDBObject("$lt",timeUpper)));
 
 		BasicDBObject query = new BasicDBObject("$and",timeAndPoints);
+
+		//System.out.println("query: " + query);
 
 
 		MongoDatabase db = m_mudb.getDatabase("ingressmu");

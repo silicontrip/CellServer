@@ -71,7 +71,7 @@ for ff in dt:
 		tsl = ts - 800
 		tsu = ts + 800
 		query = { "$and" : [ {"$or" : [ {"data.points": { "$all" :  [ {"$elemMatch" : llE6[0]}, {"$elemMatch" : llE6[1]}]} }, {"data.points": { "$all" :  [ {"$elemMatch" : llE6[1]}, {"$elemMatch" : llE6[2]}]} }, {"data.points": { "$all" :  [ {"$elemMatch" : llE6[2]}, {"$elemMatch" : llE6[0]}]} } ]} , {"timestamp": { "$gt": tsl}}, {"timestamp": { "$lt": tsu}}  ]} 
-		#print query
+		print query
 		res= ingresslog.find(query,None)
 		oid=[]	
 		mu=[]	
