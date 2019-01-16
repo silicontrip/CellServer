@@ -19,8 +19,6 @@ import com.mongodb.client.*;
 public class mufieldvalidate
 {
 
-	public static 
-
     private static S2LatLng locationToS2 (Document loc) throws NumberFormatException
     {
         if (loc.containsKey("latE6") && loc.containsKey("lngE6")) {
