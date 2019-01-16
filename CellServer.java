@@ -27,11 +27,13 @@ public class CellServer
     MongoClient m_mudb;
     BufferedReader m_in;
     OutputStreamWriter m_out;
+	HashMap<S2CellId,UniformDistribution> cellmu;
 
 	CellServer() { 
         m_socket = null; 
         m_num=0; 
         m_mudb = new MongoClient("localhost", 27017);
+	cellmu = getAllCells();
 
     } 
 
@@ -41,6 +43,7 @@ public class CellServer
         m_num = num;
         m_mudb = db;
 
+	cellmu = getAllCells();
 
         m_in = new BufferedReader( new InputStreamReader( m_socket.getInputStream() ) );
         m_out = new OutputStreamWriter( m_socket.getOutputStream() );
@@ -242,17 +245,21 @@ ingresslog.replace_one(query,muobj,upsert=True)
     public UniformDistribution getMU(S2CellId cell)
     {
 
+	return cellmu.get(cell);
+
+/*
 	UniformDistribution cellmu = getCell(cell);
+	// another utility makes sure the cell is the best it can be already.
 	UniformDistribution childmu = getAveChildMU(cell);
 
 	if (childmu == null)
 		return cellmu;
 	if (cellmu == null)
 		return childmu;
-	if (childmu.perror() > cellmu.perror())
-		return cellmu;
-
-	return childmu;
+	if (childmu.perror() < cellmu.perror())
+		return childmu;
+	return cellmu;
+*/
     }
 
     public JSONObject getIntersectionMU(S2CellUnion cells,S2Polygon thisField)
