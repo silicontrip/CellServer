@@ -69,6 +69,7 @@ public class mufieldvalidate
 
 		int count = 0;
 		int timetime = (int)(System.nanoTime() / 1000000000.0);
+		int starttime = (int)(System.nanoTime() /1000000000.0);
 // loop all fields
 		while (cursor.hasNext()) {
                         Document entitycontent = cursor.next();
@@ -112,15 +113,20 @@ public class mufieldvalidate
 			// validate the score
 			if (!fieldmu.roundAboveZero().contains(score))
 			{
-				System.out.println ("score: " + score + " -> " + fieldmu);
+				System.out.println( "score: " + score + " -> " + fieldmu + " : [" + doctodt(capturedRegion)  + "]");
+				System.out.println("" + entitycontent);
 			}
 
+/*
 			if (timetime != (int)(System.nanoTime() / 1000000000.0))
 			{
 				timetime = (int)(System.nanoTime() /1000000000.0);
-				System.out.println("" + count + " ("+timetime+") " + "score: " + score + " -> " + fieldmu + " : " + doctodt(capturedRegion) );
+				int totaltime = timetime - starttime;
+				double fps = count / totaltime;
+				System.out.println("" + count + " ("+totaltime +") " + fps +" tps" );
 			}
 			count++;
+*/
 		}
 	} catch (Exception e) {
 	            System.out.println( " Error: " + e.toString() );
