@@ -114,6 +114,7 @@ public class mufieldvalidate
 			if (!fieldmu.roundAboveZero().contains(score))
 			{
 				System.out.println( "score: " + score + " -> " + fieldmu + " : [" + doctodt(capturedRegion)  + "]");
+				System.out.println("" + entitycontent);
 			}
 
 /*
