@@ -27,6 +27,13 @@ public class mufieldvalidate
         throw new NumberFormatException("Object doesn't contain lat/lng");
     }
 
+	private static String doctodt(Document f)
+	{
+		Document data = (Document) f.get("data");
+		ArrayList<Document> capturedRegion = (ArrayList<Document>) data.get("points");
+		return doctodt(capturedRegion);
+
+	}
 	private static String doctodt(ArrayList<Document> points)
         {
                 Document vertexA = (Document) points.get(0);
@@ -47,6 +54,16 @@ public class mufieldvalidate
                                         "]}");
 
         }
+
+	private static UniformDistribution muForField (Document f, CellServer cs)
+	{
+		Document data = (Document) f.get("data");
+		ArrayList<Document> capturedRegion = (ArrayList<Document>) data.get("points");
+
+		S2Polygon thisField = cs.getS2Field(capturedRegion);
+
+		return cs.muForField(thisField);
+	}
 
     public static void main(String[] args)
     {
@@ -80,23 +97,49 @@ public class mufieldvalidate
 
 			score =  new Integer((String)entitycontent.get("mu"));
 
-			// get me the field
-                        Document data = (Document) entitycontent.get("data");
-                        ArrayList<Document> capturedRegion = (ArrayList<Document>) data.get("points");
+			// get me the field mu
 
-			S2Polygon thisField = cs.getS2Field(capturedRegion);
-			// show me the cells
-			//response = cs.cellalize(thisField);	
-			// show me the mu
-
-			UniformDistribution fieldmu = cs.muForField(thisField);
+			UniformDistribution fieldmu = muForField(entitycontent,cs);
 
 			// validate the score
 			if (fieldmu.getUpper() > 0)
 				if (!fieldmu.roundAboveZero().contains(score))
 				{
-					System.out.println( "score: " + score + " -> " + fieldmu + " : [" + doctodt(capturedRegion)  + "]");
-					System.out.println("" + entitycontent);
+					System.out.println( "score: " + score + " -> " + fieldmu + " : [" + doctodt(entitycontent)  + "]");
+					//System.out.println("");	
+					//System.out.println("" + entitycontent);
+					//System.out.println("");	
+					ArrayList<Document>  splitFields = cs.findSplitField(entitycontent);
+					//System.out.println("found: " + splitFields.size());
+					//System.out.println("");	
+					//System.out.println("");	
+					if (splitFields.size() == 2)
+					{
+						// see if reversing the mu helps
+						Integer muRec1 = new Integer((String) splitFields.get(0).get("mu"));
+						UniformDistribution muEst1 = muForField(splitFields.get(0),cs);
+						Integer muRec2 = new Integer((String) splitFields.get(1).get("mu"));
+						UniformDistribution muEst2 = muForField(splitFields.get(1),cs);
+					System.out.println( ": " + muRec1 + " -> " + muEst1 + " : [" + doctodt(entitycontent)  + "]");
+					System.out.println( ": " + muRec2 + " -> " + muEst2 + " : [" + doctodt(entitycontent)  + "]");
+
+						if (muEst1.roundAboveZero().contains(muRec2) && muEst2.roundAboveZero().contains(muRec1))
+						{
+							System.out.println ("SWAP");
+						//	System.out.println("" + splitFields);
+							
+						/*
+                        ingresslog.update_one({"_id": oid[0]},{"$set": { "mu": mu[1]} }, upsert=False)
+                        ingresslog.update_one({"_id": oid[1]},{"$set": { "mu": mu[0]} }, upsert=False)
+						*/
+
+						} else {
+							System.out.println("swapping doesn't work");
+						}
+
+					} else {
+						System.out.println("" + splitFields.size()+ " != 2 split fields");
+					}
 				}
 
 /*
