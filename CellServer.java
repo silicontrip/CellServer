@@ -91,7 +91,9 @@ public class CellServer
 
     public S2Polygon getS2Field(ArrayList<Document> latlng)
     {
-        return makePolyField(locationToS2((Document)latlng.get(0)),locationToS2((Document)latlng.get(1)),locationToS2((Document)latlng.get(2)));
+        return makePolyField(locationToS2((Document)latlng.get(0)),
+		locationToS2((Document)latlng.get(1)),
+		locationToS2((Document)latlng.get(2)));
     }
     
     public S2Polygon getS2Field(JSONArray latlng)
@@ -108,13 +110,13 @@ public class CellServer
 
         for (Object llobj: points)
         {
-            BasicDBObject pts = new BasicDBObject();
-            JSONObject latlng = (JSONObject)llobj;
+		BasicDBObject pts = new BasicDBObject();
+		JSONObject latlng = (JSONObject)llobj;
 
-            pts.put("latE6", latlng.getLong("latE6"));
-	    	pts.put("lngE6", latlng.getLong("lngE6"));
+		pts.put("latE6", latlng.getLong("latE6"));
+		pts.put("lngE6", latlng.getLong("lngE6"));
 
-			pointlist.add(new BasicDBObject("$elemMatch",pts));
+		pointlist.add(new BasicDBObject("$elemMatch",pts));
         }
         return pointlist;
     }
@@ -140,6 +142,66 @@ public class CellServer
 
         return fa;
     }
+
+	public ArrayList<Document> findSplitField(Document field)
+	{
+	
+		Integer searchTime =  field.getInteger("timestamp");
+		Document data = (Document) field.get("data");
+		ArrayList<Document> capturedRegion = (ArrayList<Document>) data.get("points");
+
+		return findSplitField(capturedRegion,searchTime-800, searchTime+800); // this needs to be configurable
+			
+	}
+
+	public ArrayList<Document> findSplitField(ArrayList<Document> pointlist, Integer timeLower, Integer timeUpper)
+	{
+		Document p1 = pointlist.get(0);
+		Document p2 = pointlist.get(1);
+		Document p3 = pointlist.get(2);
+
+		BasicDBObject match1 = new BasicDBObject("$elemMatch",p1);
+		BasicDBObject match2 = new BasicDBObject("$elemMatch",p2);
+		BasicDBObject match3 = new BasicDBObject("$elemMatch",p3);
+
+		BasicDBList allMatch12 = new BasicDBList();
+		allMatch12.add(match1);
+		allMatch12.add(match2);
+
+		BasicDBList allMatch23 = new BasicDBList();
+		allMatch23.add(match2);
+		allMatch23.add(match3);
+
+		BasicDBList allMatch31 = new BasicDBList();
+		allMatch31.add(match3);
+		allMatch31.add(match1);
+
+		BasicDBList anyPoints = new BasicDBList();
+		anyPoints.add(new BasicDBObject("data.points",allMatch12));
+		anyPoints.add(new BasicDBObject("data.points",allMatch23));
+		anyPoints.add(new BasicDBObject("data.points",allMatch31));
+
+		BasicDBList timeAndPoints = new BasicDBList();
+		timeAndPoints.add(new BasicDBObject("$or",anyPoints));
+		timeAndPoints.add(new BasicDBObject("timestamp", new BasicDBObject("$gt",timeLower)));
+		timeAndPoints.add(new BasicDBObject("timestamp", new BasicDBObject("$lt",timeUpper)));
+
+		BasicDBObject query = new BasicDBObject("$and",timeAndPoints);
+
+
+		MongoDatabase db = m_mudb.getDatabase("ingressmu");
+		MongoCollection table = db.getCollection("ingressmu");
+		MongoCursor<Document> cursor = table.find(query).iterator();
+
+
+		ArrayList<Document> fa = new ArrayList<Document>();
+
+		while (cursor.hasNext())
+			fa.add(cursor.next());
+
+		return fa;
+
+	}
 
     public S2CellUnion getCellsForField(S2Polygon thisField)
     {
@@ -459,7 +521,7 @@ ingresslog.replace_one(query,muobj,upsert=True)
 
 	public UniformDistribution muForField(S2Polygon s2Field)
 	{
-		JSONObject response = cellaliza(s2Field);
+		JSONObject response = cellalize(s2Field);
 		UniformDistribution fieldmu = new UniformDistribution(0,0);
 
 		for (Iterator<String> id= response.keys(); id.hasNext();)
