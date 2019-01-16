@@ -6,7 +6,7 @@ import com.mongodb.client.*;
 
 public class mucellquad {
 
-        private UniformDistribution getAveChildMU(S2CellId cell,CellServer cs)
+        private static UniformDistribution getAveChildMU(S2CellId cell,CellServer cs)
         {
                 if (cell.level() < 13)
                 {
@@ -24,7 +24,7 @@ public class mucellquad {
                 }
                 return null;
         }
-    private UniformDistribution getMU(S2CellId cell,CellServer cs)
+    private static UniformDistribution getMU(S2CellId cell,CellServer cs)
     {
 
         UniformDistribution cellmu = cs.getCell(cell);
@@ -47,6 +47,7 @@ public static void main(String[] args) {
 
 	HashMap<S2CellId,UniformDistribution> cells = cs.getAllCells();
 
+	int total = cells.size();
 	// loop through all cells
 	int count = 0 ;
 	int timetime = (int)(System.nanoTime() / 1000000000.0);
@@ -58,7 +59,7 @@ public static void main(String[] args) {
                         if (timetime != (int)(System.nanoTime() / 1000000000.0))
                         {
                                 timetime = (int)(System.nanoTime() /1000000000.0);
-                                System.out.println("" + count );
+                                System.out.println("" + count +"/"+total);
                         }
 	}
 
