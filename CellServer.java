@@ -457,6 +457,30 @@ ingresslog.replace_one(query,muobj,upsert=True)
         return jobj;
     }
 
+	public UniformDistribution muForField(S2Polygon s2Field)
+	{
+		JSONObject response = cellaliza(s2Field);
+		UniformDistribution fieldmu = new UniformDistribution(0,0);
+
+		for (Iterator<String> id= response.keys(); id.hasNext();)
+		{
+			String cellid = id.next();
+			JSONObject cell = response.getJSONObject(cellid);
+			//System.out.println(cell);
+			// do we have information for this cell
+			// if not we should skip this whole thing
+			if (cell.has("mu_min"))
+			{
+				UniformDistribution cellmu = new UniformDistribution(cell.getDouble("mu_min"),cell.getDouble("mu_max"));
+				cellmu = cellmu.mul(cell.getDouble("area"));
+				fieldmu = fieldmu.add(cellmu);
+			} else {
+				return new UniformDistribution(-1,-1);
+			}
+		}
+		return fieldmu;
+	}
+
 	public JSONObject cellalize (S2Polygon s2Field)
 	{
                 S2CellUnion cells = getCellsForField(s2Field);
@@ -552,7 +576,7 @@ ingresslog.replace_one(query,muobj,upsert=True)
                                     System.out.println("Command:" + command[1]);
                                     if (command[1].equals("CELLS"))
                                     {
-					                    response = cellalize(dtobj.getJSONObject(0));
+					response = cellalize(dtobj.getJSONObject(0));
                                         respondOK(""+response);
                                     }
                                     if (command[1].equals("MU"))

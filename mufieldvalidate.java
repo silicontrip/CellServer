@@ -18,6 +18,9 @@ import com.mongodb.client.*;
 
 public class mufieldvalidate
 {
+
+	public static 
+
     private static S2LatLng locationToS2 (Document loc) throws NumberFormatException
     {
         if (loc.containsKey("latE6") && loc.containsKey("lngE6")) {
@@ -73,49 +76,30 @@ public class mufieldvalidate
 // loop all fields
 		while (cursor.hasNext()) {
                         Document entitycontent = cursor.next();
-                        // arg some of these are strings and some integers...
                         Integer score;
-			// I should probably remove this, there is a support script to convert everything to a String
+			// there is a support script to convert everything to a String
 			// and then find out what's still writing integers
 
-                        //try {
-                              score =  new Integer((String)entitycontent.get("mu"));
-                        //} catch (ClassCastException e) {
-                        //        score =  (Integer)entitycontent.get("mu");
-                        //}
+			score =  new Integer((String)entitycontent.get("mu"));
+
 			// get me the field
                         Document data = (Document) entitycontent.get("data");
                         ArrayList<Document> capturedRegion = (ArrayList<Document>) data.get("points");
 
 			S2Polygon thisField = cs.getS2Field(capturedRegion);
 			// show me the cells
-			response = cs.cellalize(thisField);	
+			//response = cs.cellalize(thisField);	
+			// show me the mu
 
-			UniformDistribution fieldmu = new UniformDistribution(0,0);
-
-                        for (Iterator<String> id= response.keys(); id.hasNext();)
-                        {
-                                String cellid = id.next();
-                                JSONObject cell = response.getJSONObject(cellid);
-                                //System.out.println(cell);
-				// do we have information for this cell
-				// if not we should skip this whole thing
-                                if (cell.has("mu_min"))
-                                {
-                                        UniformDistribution cellmu = new UniformDistribution(cell.getDouble("mu_min"),cell.getDouble("mu_max"));
-                                        cellmu = cellmu.mul(cell.getDouble("area"));
-                                        fieldmu = fieldmu.add(cellmu);
-                                } else {
-					break;
-				}
-                        }
+			UniformDistribution fieldmu = cs.muForField(thisField);
 
 			// validate the score
-			if (!fieldmu.roundAboveZero().contains(score))
-			{
-				System.out.println( "score: " + score + " -> " + fieldmu + " : [" + doctodt(capturedRegion)  + "]");
-				System.out.println("" + entitycontent);
-			}
+			if (fieldmu.getUpper() > 0)
+				if (!fieldmu.roundAboveZero().contains(score))
+				{
+					System.out.println( "score: " + score + " -> " + fieldmu + " : [" + doctodt(capturedRegion)  + "]");
+					System.out.println("" + entitycontent);
+				}
 
 /*
 			if (timetime != (int)(System.nanoTime() / 1000000000.0))
