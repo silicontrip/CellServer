@@ -126,7 +126,19 @@ public class mufieldvalidate
 						if (muEst1.roundAboveZero().contains(muRec2) && muEst2.roundAboveZero().contains(muRec1))
 						{
 							System.out.println ("SWAP");
-						//	System.out.println("" + splitFields);
+							System.out.println("" + splitFields);
+
+						//UpdateOptions options = new UpdateOptions().upsert(false);
+						BasicDBObject id;
+						BasicDBObject update;
+
+						id = new BasicDBObject("_id",splitFields.get(0).get("_id"));
+						update = new BasicDBObject("$set" , new BasicDBObject("mu",muRec2.toString()));
+						table.updateOne(id,update);
+
+						id = new BasicDBObject("_id",splitFields.get(1).get("_id"));
+						update = new BasicDBObject("$set" , new BasicDBObject("mu",muRec1.toString()));
+						table.updateOne(id,update);
 							
 						/*
                         ingresslog.update_one({"_id": oid[0]},{"$set": { "mu": mu[1]} }, upsert=False)
