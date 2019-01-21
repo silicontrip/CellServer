@@ -109,6 +109,7 @@ public class mucelliter {
 					Double area = thisField.getArea() * 6367 * 6367 ;
 
 					UniformDistribution score = muScore(entitycontent).div(area);
+					//System.out.println("single score -> " + score);
 					// only 1 cell, is there a simpler way of getting it?
 					for (S2CellId cello: cells) {
 						UniformDistribution cellomu = multi2.get(cello);
@@ -116,6 +117,7 @@ public class mucelliter {
 						{
 							cellomu = score;
 						} else {
+							//System.out.println("single refine -> " + cello);
 							cellomu.refine(score);
 						}
 						multi2.put(cello,cellomu);
@@ -155,11 +157,12 @@ public class mucelliter {
 					Double totalArea = thisField.getArea() * 6367 * 6367 ; // only used in watch cell
 					HashSet<S2CellId> multiKey = new HashSet<S2CellId>();
 
-					UniformDistribution  score =  muScore(entitycontent);
-					Double area;
 
 					// loop through field cells
 					for (S2CellId cello: cells) {
+						UniformDistribution  score =  muScore(entitycontent);
+						System.out.println("multi score -> " + score);
+						Double area;
 						StringBuilder errmsg = new StringBuilder();
 						boolean watchOn = false;
 						if (watchCell.equals(cello.toToken()))
@@ -207,10 +210,10 @@ public class mucelliter {
 
 						area = getIntArea(cello,thisField);
 						score= score.div(area);
+						//System.out.println("multi final score -> " + score);
 
 						//errmsg.append(" " + score + " ");
 						UniformDistribution cellomu = multi2.get(cello);
-						//if (ag.hasOption("v"))
 /*
 						if(watchOn)
 						{
