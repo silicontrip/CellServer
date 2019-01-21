@@ -53,7 +53,8 @@ public class CellServer
     }
     
 
-    private static S2Polygon polyFromCell (S2Cell cell) 
+// may consider seperating the server code from the cell/field methods.
+    public static S2Polygon polyFromCell (S2Cell cell) 
     {
         S2PolygonBuilder pb = new S2PolygonBuilder(S2PolygonBuilder.Options.UNDIRECTED_UNION);
         pb.addEdge(cell.getVertex(0),cell.getVertex(1));
@@ -64,7 +65,7 @@ public class CellServer
                 
     }
 
-    private S2Polygon makePolyField (S2LatLng v1,S2LatLng v2,S2LatLng v3)
+    public static S2Polygon makePolyField (S2LatLng v1,S2LatLng v2,S2LatLng v3)
     {
         S2PolygonBuilder pb = new S2PolygonBuilder(S2PolygonBuilder.Options.UNDIRECTED_UNION);
         pb.addEdge(v1.toPoint(),v2.toPoint());
@@ -73,7 +74,7 @@ public class CellServer
         return pb.assemblePolygon();
     }
 
-    private static S2LatLng locationToS2 (Document loc) throws NumberFormatException
+    public static S2LatLng locationToS2 (Document loc) throws NumberFormatException
     {
         if (loc.containsKey("latE6") && loc.containsKey("lngE6")) {
             return S2LatLng.fromDegrees( loc.getInteger("latE6") / 1000000.0, loc.getInteger("lngE6")/1000000.0);
@@ -81,7 +82,7 @@ public class CellServer
         throw new NumberFormatException("Object doesn't contain lat/lng");
     }
 
-    private static S2LatLng locationToS2 (JSONObject loc) throws NumberFormatException
+    public static S2LatLng locationToS2 (JSONObject loc) throws NumberFormatException
     {
         if (loc.has("lat") && loc.has("lng")) {
             return S2LatLng.fromDegrees( loc.getDouble("lat"), loc.getDouble("lng"));
@@ -89,14 +90,14 @@ public class CellServer
         throw new NumberFormatException("Object doesn't contain lat/lng");
     }
 
-    public S2Polygon getS2Field(ArrayList<Document> latlng)
+    public static S2Polygon getS2Field(ArrayList<Document> latlng)
     {
         return makePolyField(locationToS2((Document)latlng.get(0)),
 		locationToS2((Document)latlng.get(1)),
 		locationToS2((Document)latlng.get(2)));
     }
     
-    public S2Polygon getS2Field(JSONArray latlng)
+    public static S2Polygon getS2Field(JSONArray latlng)
     {
         return makePolyField(locationToS2(latlng.getJSONObject(0)),locationToS2(latlng.getJSONObject(1)),locationToS2(latlng.getJSONObject(2)));
     }
@@ -120,6 +121,7 @@ public class CellServer
         }
         return pointlist;
     }
+
     protected ArrayList<Document> findField(BasicDBList pointlist)
     {
 
