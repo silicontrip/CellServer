@@ -296,7 +296,7 @@ public class mucelliter {
 
 	public static boolean diffMU (HashMap<S2CellId,UniformDistribution> a, HashMap<S2CellId,UniformDistribution> b)
 	{
-		if (a.size() != b.size()) return false;
+		if (a.size() != b.size()) return true;
 		for (S2CellId cell: b.keySet())
 			if (!b.get(cell).equals(a.get(cell)))
 			{
