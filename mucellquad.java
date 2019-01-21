@@ -34,10 +34,10 @@ public class mucellquad {
                 return cellmu;
         if (cellmu == null)
                 return childmu;
-        if (childmu.perror() > cellmu.perror())
-                return cellmu;
 
-        return childmu;
+	cellmu.refine(childmu);
+
+        return cellmu;
     }
 
 public static void main(String[] args) {
