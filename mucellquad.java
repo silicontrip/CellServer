@@ -6,7 +6,9 @@ import com.mongodb.client.*;
 
 public class mucellquad {
 
-        private static UniformDistribution getAveChildMU(S2CellId cell,CellServer cs)
+	HashMap<S2CellId,UniformDistribution> cells;
+
+        private UniformDistribution getAveChildMU(S2CellId cell)
         {
                 if (cell.level() < 13)
                 {
@@ -14,7 +16,7 @@ public class mucellquad {
                         UniformDistribution ttmu = new UniformDistribution (0,0);
                     for (int pos = 0; pos < 4; ++pos, id = id.next())
                         {
-                                UniformDistribution mu = getMU(id,cs);
+                                UniformDistribution mu = cells.get(cell);
                                 if (mu == null)
                                         return null;
                                 ttmu = ttmu.add(mu);
@@ -24,11 +26,11 @@ public class mucellquad {
                 }
                 return null;
         }
-    private static UniformDistribution getMU(S2CellId cell,CellServer cs)
+    private UniformDistribution getMU(S2CellId cell)
     {
 
-        UniformDistribution cellmu = cs.getCell(cell);
-        UniformDistribution childmu = getAveChildMU(cell,cs);
+        UniformDistribution cellmu = cells.get(cell);
+        UniformDistribution childmu = getAveChildMU(cell);
 
         if (childmu == null)
                 return cellmu;
@@ -39,29 +41,54 @@ public class mucellquad {
 
         return cellmu;
     }
-
-public static void main(String[] args) {
-
-
-	CellServer cs = new CellServer();
-
-	HashMap<S2CellId,UniformDistribution> cells = cs.getAllCells();
-
-	int total = cells.size();
-	// loop through all cells
-	int count = 0 ;
-	int timetime = (int)(System.nanoTime() / 1000000000.0);
-	for (S2CellId cell: cells.keySet())
+	public void setCells(HashMap<S2CellId,UniformDistribution> c) { cells = c; }
+	public void validate ()
 	{
-		UniformDistribution nud = getMU(cell,cs);
-		cs.putMU(cell,nud);
+		int total = cells.size();
+		int count = 0 ;
+		int timetime = (int)(System.nanoTime() / 1000000000.0);
+
+		for (S2CellId cell: cells.keySet())
+		{
+			UniformDistribution nud = getMU(cell);
+			//System.out.println("" + cells.get(cell) + " <-> " + nud);
+		//cs.putMU(cell,nud);
+			cells.put(cell,nud);
 		count++;
                         if (timetime != (int)(System.nanoTime() / 1000000000.0))
                         {
                                 timetime = (int)(System.nanoTime() /1000000000.0);
                                 System.out.println("" + count +"/"+total);
                         }
+		}
 	}
+
+	public void storeMu(CellServer cs) {
+		for (S2CellId cell: cells.keySet())
+		{
+			UniformDistribution nud = cells.get(cell);
+			UniformDistribution oud = cs.getMU(cell);
+			if (!nud.equals(oud))
+			{
+				System.out.println("" + oud + " -> " + nud);
+				cs.putMU(cell,nud);
+			}
+		}
+	}
+	
+
+
+
+public static void main(String[] args) {
+
+
+	CellServer cs = new CellServer();
+
+	mucellquad mu = new mucellquad();
+	mu.setCells(cs.getAllCells());
+	mu.validate();
+	mu.storeMu(cs);
+
 
 }
 
