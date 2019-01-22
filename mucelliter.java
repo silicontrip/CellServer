@@ -129,6 +129,46 @@ public class mucelliter {
 			return true;
 		return fieldmu.roundAboveZero().contains(score);
 	}
+	
+	protected HashMap<S2CellId,UniformDistribution> processCells (HashMap<S2CellId,UniformDistribution> multi)
+	{
+		HashMap<S2CellId,UniformDistribution> multi2 = new HashMap<S2CellId,UniformDistribution>();
+
+                // copy multiSet over
+                for (S2CellId cell: multi.keySet())
+                        multi2.put(cell, multi.get(cell));
+
+		for (S2CellId cell: multi.keySet())
+		{
+			S2CellId parent = cell.parent();
+			UniformDistribution parentMu = multi.get(parent);
+			if (parentMu != null)
+			{
+				UniformDistribution totalMu = parentMu.mul(4);
+				S2CellId sibling = parent.childBegin();
+				for (int pos = 0; pos < 4; ++pos, sibling = sibling.next())
+				{
+					if (!sibling.equals(cell))
+					{
+						UniformDistribution cellMu = multi.get(sibling);
+						if (cellMu==null)
+							totalMu.setLower(0.0);
+						else
+							totalMu = totalMu.sub(cellMu);
+					}
+
+				}
+				UniformDistribution nud = multi.get(cell);
+				nud.refine(totalMu);
+				multi2.put(cell,nud);
+			}	
+
+		}
+
+		return multi2;
+
+	}
+
 
 	protected void processField (HashMap<S2CellId,UniformDistribution> multi , HashMap<S2CellId,UniformDistribution> multi2 ,S2Polygon f, UniformDistribution mu)
 	{
@@ -294,13 +334,22 @@ public class mucelliter {
 	public void setWatchField (S2Polygon f) { watchField = f; }
 	public void setWatchFieldMu (String s) { watchFieldMu = new Integer(s); }
 
+	public static int diffCount (HashMap<S2CellId,UniformDistribution> a, HashMap<S2CellId,UniformDistribution> b)
+	{
+		int count =0;
+		for (S2CellId cell: b.keySet())
+			if (!b.get(cell).equals(a.get(cell)))
+				count++;
+		return count;
+	}
+
 	public static boolean diffMU (HashMap<S2CellId,UniformDistribution> a, HashMap<S2CellId,UniformDistribution> b)
 	{
 		if (a.size() != b.size()) return true;
 		for (S2CellId cell: b.keySet())
 			if (!b.get(cell).equals(a.get(cell)))
 			{
-				System.err.println(a.get(cell) + " -> " + b.get(cell));
+				//System.err.println(a.get(cell) + " -> " + b.get(cell));
 				return true;
 			}
 		return false;
@@ -334,18 +383,27 @@ public class mucelliter {
 		try {
 
 
-			HashMap<S2CellId,UniformDistribution> multi = new HashMap<S2CellId,UniformDistribution>();
-			HashMap<S2CellId,UniformDistribution> multi2 = new HashMap<S2CellId,UniformDistribution>();
+			HashMap<S2CellId,UniformDistribution> multi = new HashMap<S2CellId,UniformDistribution> ();
+			HashMap<S2CellId,UniformDistribution> multi2;
+			HashMap<S2CellId,UniformDistribution> multi3;
 			//boolean diff = true;
 				
 			System.err.println("single...");
 
-			multi2 = mu.processSingle();
+			multi3 = mu.processSingle();
+			System.err.println("" + multi3.size() + " cells calculated");
+			System.err.println("process cells...");
+			multi2 = mu.processCells(multi3);
+			System.err.println("" + diffCount(multi3,multi2) + " cells updated.");
 
 			while (diffMU(multi,multi2)) {
 				multi = multi2;
 				System.err.println("iterating...");
-				multi2 = mu.processMulti(multi);
+				multi3 = mu.processMulti(multi);
+			System.err.println("" + multi3.size() + " total " + diffCount(multi,multi3) + " cells updated.");
+				System.err.println("process cells...");
+				multi2 = mu.processCells(multi3);
+			System.err.println("" + multi2.size() + " total " + diffCount(multi3,multi2) + " cells updated.");
 
 			}
 
