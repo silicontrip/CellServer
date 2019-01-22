@@ -96,6 +96,32 @@ public class mucelliter {
 
 	}
 
+	protected boolean validateCell(HashMap<S2CellId,UniformDistribution> multi,S2CellId cell)
+        {
+		if (multi.get(cell) == null)
+			return true; // or should we synthesize one from the children?
+                if (cell.level() < 13)
+                {
+			S2CellId id = cell.childBegin();
+                        UniformDistribution ttmu = new UniformDistribution (0,0);
+			for (int pos = 0; pos < 4; ++pos, id = id.next())
+                        {
+                                UniformDistribution mu = multi.get(id);
+                                if (mu == null)
+                                        return true; // not enough info to validate
+                                ttmu = ttmu.add(mu);
+                        }
+
+			try {
+				ttmu.div(4.0).refine(multi.get(cell));
+				return true;
+			} catch (Exception e) {
+				return false;
+			}
+                }
+                return true;  // we don't have children of level 13 cells
+        }
+
 	protected boolean validateField (HashMap<S2CellId,UniformDistribution> multi,S2Polygon f, int score)
 	{
 		UniformDistribution fieldmu = muForField(multi,f); // need to use internal method.
@@ -141,9 +167,14 @@ public class mucelliter {
 			}
 			cellomu.clampLower(0.0);
 			multi2.put(cello,cellomu);
+
+			if (!validateCell(multi2,cello) || !validateCell(multi2,cello.parent()))
+			{
+				System.out.println("cell parent/child conflict: " + cello + " ["  + f + "] mu: " + mu);
+			}
 		}
 	}
-	protected HashMap<S2CellId,UniformDistribution> processSingle()
+	protected HashMap<S2CellId,UniformDistribution> processSingle() throws Exception
 	{
 		// java mongo API doesn't have rewind
 		cursor = table.find().iterator();
@@ -179,6 +210,10 @@ public class mucelliter {
 							cellomu.refine(score);
 						}
 						multi2.put(cello,cellomu);
+						if (!validateCell(multi2,cello) || !validateCell(multi2,cello.parent()))
+						{
+							System.out.println("cell parent/child conflict: " + cello + " ["  + doctodt(capturedRegion) + "] mu: "+entitycontent.get("mu"));
+						}
 					}	
 				}
 			}
@@ -188,8 +223,9 @@ public class mucelliter {
 				if (!validateField(multi2,watchField,watchFieldMu))
 				{
 					// the last field causes this field to become invalid
-					System.out.println("invalidates watch field: ["  + doctodt(capturedRegion) + "]");
+					System.out.println("invalidates watch field: " + watchFieldMu + " -> " + muForField(multi2,watchField) + " : ["  + doctodt(capturedRegion) + "] mu: "+entitycontent.get("mu"));
 					// might need to quit at this point
+					throw new Exception("Invalidates Watch Field");
 				}
 			}
 		}
