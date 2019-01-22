@@ -1,5 +1,6 @@
 import java.util.*;
 import org.bson.*;
+import org.json.*;
 import com.google.common.geometry.*;
 import com.mongodb.*;
 import com.mongodb.client.*;
@@ -15,6 +16,12 @@ public class mucelliter {
 	private MongoCursor<Document> cursor;
 	private MongoCollection<org.bson.Document> table;
 	private String watchCell;
+	private S2Polygon watchField;
+	private Integer watchFieldMu;
+
+	// these need better names now that they are instance variables.
+	//HashMap<S2CellId,UniformDistribution> multi; 
+	//HashMap<S2CellId,UniformDistribution> multi2;
 
 	private static String doctodt(ArrayList<Document> points)
 	{
@@ -40,20 +47,9 @@ public class mucelliter {
 	protected HashSet<S2LatLng> fieldHash(ArrayList<Document> f)
 	{
 		HashSet<S2LatLng> fieldKey = new HashSet<S2LatLng>();
-
-		//Document vertexA = (Document) f.get(0);
-		Document vertexB = (Document) f.get(1);
-		Document vertexC = (Document) f.get(2);
-							
-		//S2LatLng latlngA = 
-		fieldKey.add(cs.locationToS2 ((Document) f.get(0)));
-		S2LatLng latlngB = cs.locationToS2 (vertexB);
-		S2LatLng latlngC = cs.locationToS2 (vertexC);
-
-
-		//fieldKey.add(latlngA);
-		fieldKey.add(latlngB);
-		fieldKey.add(latlngC);
+		// as long as there are 3
+		for (Document l : f)
+			fieldKey.add(cs.locationToS2 (l));
 
 		return fieldKey;
 		
@@ -84,13 +80,75 @@ public class mucelliter {
 		return intPoly.getArea() * 6367 * 6367 ;
 	}
 
+	protected UniformDistribution muForField(HashMap<S2CellId,UniformDistribution> multi,S2Polygon f)
+	{
+		UniformDistribution totalScore = new UniformDistribution(0,0);
+		S2CellUnion cells = cs.getCellsForField(f);
+		for (S2CellId cell: cells)
+		{
+			double area = getIntArea(cell,f);
+			UniformDistribution cellmu = multi.get(cell);  // have to make this an instance variable.
+			if (cellmu == null)
+				return new UniformDistribution(0,0);  // unknown sentinel
+			totalScore = totalScore.add(cellmu.mul(area));
+		}
+		return totalScore;
+
+	}
+
+	protected boolean validateField (HashMap<S2CellId,UniformDistribution> multi,S2Polygon f, int score)
+	{
+		UniformDistribution fieldmu = muForField(multi,f); // need to use internal method.
+		if (fieldmu.getUpper() == 0) // not known if valid.
+			return true;
+		return fieldmu.roundAboveZero().contains(score);
+	}
+
+	protected void processField (HashMap<S2CellId,UniformDistribution> multi , HashMap<S2CellId,UniformDistribution> multi2 ,S2Polygon f, UniformDistribution mu)
+	{
+		S2CellUnion cells = cs.getCellsForField (f);
+		for (S2CellId cello: cells) {
+			UniformDistribution score = new UniformDistribution(mu);
+			for (S2CellId celli: cells) 
+				if (!cello.toToken().equals(celli.toToken()))
+				{
+					double area = getIntArea(celli,f);
+					UniformDistribution cellmu = multi.get(celli);
+
+					if (cellmu != null)
+						score = score.sub(cellmu.mul(area));
+					else
+						score.setLower(0.0);
+				}	
+
+			double area = getIntArea(cello,f);
+			score= score.div(area);
+
+			UniformDistribution cellomu = multi2.get(cello);
+
+			//update cell
+			if (cellomu == null)
+				cellomu = score;
+			else 
+			{
+				try {
+					UniformDistribution oldcell = new UniformDistribution(cellomu);
+					cellomu.refine(score);
+				} catch (Exception e) {
+					System.err.print(cello.toToken() + " ");
+					System.err.println(e.getMessage() + " : [" + f + "]");
+				}
+			}
+			cellomu.clampLower(0.0);
+			multi2.put(cello,cellomu);
+		}
+	}
 	protected HashMap<S2CellId,UniformDistribution> processSingle()
 	{
 		// java mongo API doesn't have rewind
 		cursor = table.find().iterator();
 		HashMap<S2CellId,UniformDistribution> multi2 = new HashMap<S2CellId,UniformDistribution>();
 		HashSet<HashSet<S2LatLng>> fieldSet = new HashSet<HashSet<S2LatLng>>();
-
 
 		while (cursor.hasNext()) {
 			Document entitycontent = cursor.next();
@@ -124,9 +182,21 @@ public class mucelliter {
 					}	
 				}
 			}
+			// validate field!
+			if (watchField != null)
+			{
+				if (!validateField(multi2,watchField,watchFieldMu))
+				{
+					// the last field causes this field to become invalid
+					System.out.println("invalidates watch field: ["  + doctodt(capturedRegion) + "]");
+					// might need to quit at this point
+				}
+			}
 		}
 		return multi2;	
 	}
+
+	
 	protected  HashMap<S2CellId,UniformDistribution> processMulti (HashMap<S2CellId,UniformDistribution> multi)
 	{
 		cursor = table.find().iterator();
@@ -136,11 +206,7 @@ public class mucelliter {
 
 		// copy multiSet over 
 		for (S2CellId cell: multi.keySet())
-		{
-			if (watchCell.equals(cell.toToken()))
-				System.out.println("CELL: " + multi.get(cell)); 
 			multi2.put(cell, multi.get(cell));
-		}
 
 		while (cursor.hasNext()) {
 			Document entitycontent = cursor.next();
@@ -154,126 +220,18 @@ public class mucelliter {
 
 				if (cells.size() > 1)
 				{
-					Double totalArea = thisField.getArea() * 6367 * 6367 ; // only used in watch cell
-					HashSet<S2CellId> multiKey = new HashSet<S2CellId>();
-
-
-					// loop through field cells
-					for (S2CellId cello: cells) {
-						UniformDistribution  score =  muScore(entitycontent);
-						//System.out.println("multi score -> " + score);
-						Double area;
-						StringBuilder errmsg = new StringBuilder();
-						boolean watchOn = false;
-						if (watchCell.equals(cello.toToken()))
-						{
-							watchOn = true;
-
-							System.out.println("analysing: " + entitycontent.get("_id") +" [" + doctodt(capturedRegion) + "]");
-							ArrayList<Document> ent = (ArrayList<Document>) entitycontent.get("ent"); 
-							String cdate = new String("" + ent.get(1)); Date creation= new Date(Long.parseLong(cdate));
-							System.out.println("ts = " +  ent.get(1) + " " + creation);
-							System.out.println("" + cello.toToken() + " : " + score  + " mu " + score.div(totalArea) +" mu/km");
-
-						}
-					
-						// loop through field cells
-						for (S2CellId celli: cells) {
-							// if not cell from outer loop
-							if (!cello.toToken().equals(celli.toToken()))
-							{
-								area = getIntArea(celli,thisField);
-
-								// subtract upper range * area from lower MU
-								// subtract lower range * area from upper MU
-							//	errmsg.append (score +" ");
-							//	errmsg.append (score.div(totalArea) +" ");
-								UniformDistribution cellmu = multi.get(celli);
-
-								if (cellmu != null)
-								{
-									score = score.sub(cellmu.mul(area));
-									if (watchOn)
-									{
-										System.out.print( celli.toToken() );
-										System.out.println(" - (" + cellmu + " x " + area + ") = " + score);
-									}
-								}
-								else
-								{
-									score.setLower(0.0);
-									if (watchOn)
-										System.out.println("" + celli.toToken() + " undef = " + score );
-								}
-							}	
-						}
-
-						area = getIntArea(cello,thisField);
-						score= score.div(area);
-						//System.out.println("multi final score -> " + score);
-
-						//errmsg.append(" " + score + " ");
-						UniformDistribution cellomu = multi2.get(cello);
-/*
-						if(watchOn)
-						{
-							System.out.println(cello.toToken() + " : " + cellomu + " x " +  score);
-
-						}
-*/
-						//lower_mu / outercell.area
-						//upper_mu / outercell.area
-						//update cell
-						if (cellomu == null)
-						{
-							cellomu = score;
-							if (watchOn)
-								System.err.println("NEW: " + cello.toToken() + " : " + cellomu);
-						}
-						else 
-						{
-							try {
-								UniformDistribution oldcell = new UniformDistribution(cellomu);
-								if (cellomu.refine(score))
-								{
-									if (watchOn) 
-										System.err.println("UPD: " + cello.toToken() + " : " + cellomu);
-									;
-								}
-								if (watchOn && !oldcell.equals(cellomu))
-								{
-									System.out.println("analysing: " + entitycontent.get("_id") +" [" + doctodt(capturedRegion) + "]");
-									ArrayList<Document> ent = (ArrayList<Document>) entitycontent.get("ent"); String cdate = new String("" + ent.get(1)); Date creation= new Date(Long.parseLong(cdate));
-									System.out.println("ts = " +  ent.get(1) + " " + creation);
-									System.out.println("" + cello.toToken() + " : " + score  + " mu " + score.div(totalArea) +" mu/km");
-									System.out.println(cello.toToken() + " : " + oldcell + " x " +  score);
-									System.out.println(" -> " + cellomu);
-									System.out.println("");
-								}
-							} catch (Exception e) {
-								ArrayList<Document> ent = (ArrayList<Document>) entitycontent.get("ent"); 
-								String cdate = new String("" + ent.get(1)); 
-								Date creation= new Date(Long.parseLong(cdate));
-								if (watchOn)
-								{
-									System.out.print("" + totalArea + " "  + creation +" " );
-									System.out.print(cello.toToken() + " ");
-									System.out.println(e.getMessage() + " : [" + doctodt(capturedRegion) + "]");
-								} else if (watchCell.length()==0) {
-									System.out.print("" + totalArea + " "  + creation +" " );
-									System.err.print(cello.toToken() + " ");
-									System.err.println(e.getMessage() + " : [" + doctodt(capturedRegion) + "]");
-								}
-							}
-						}
-						//if (watchOn)
-							//System.out.println("");
-						cellomu.clampLower(0.0);
-						multi2.put(cello,cellomu);
-						//cs.putMU(cello,cellomu);
-
-					}
-					
+					UniformDistribution  score =  muScore(entitycontent);
+					processField(multi,multi2,thisField,score);
+				}
+			}
+			// validate field!
+			if (!(watchField == null))
+			{
+				if (!validateField(multi2,watchField,watchFieldMu))
+				{
+					// the last field causes this field to become invalid
+					System.out.println("invalidates watch field: ["  + doctodt(capturedRegion) + "]");
+					// might need to quit at this point
 				}
 			}
 		}
@@ -296,6 +254,8 @@ public class mucelliter {
 
 	public void setWatchCell (String s) { watchCell = s; }
 	public void setRange (double d) { range = d; }
+	public void setWatchField (S2Polygon f) { watchField = f; }
+	public void setWatchFieldMu (String s) { watchFieldMu = new Integer(s); }
 
 	public static boolean diffMU (HashMap<S2CellId,UniformDistribution> a, HashMap<S2CellId,UniformDistribution> b)
 	{
@@ -316,13 +276,23 @@ public class mucelliter {
 	public static void main(String[] args) {
 
 		mucelliter mu = new mucelliter();		
-
 		Arguments ag = new Arguments(args);
 
 		if (ag.hasOption("v"))
 			mu.setWatchCell(ag.getOptionForKey("v"));
-			
 
+		if (ag.hasOption("f"))
+		{
+			JSONArray dt = new JSONArray(ag.getOptionForKey("f"));
+			JSONObject dField = (JSONObject)dt.get(0);	
+			mu.setWatchField (CellServer.getS2Field((JSONArray)dField.get("latLngs")));
+			if (ag.hasOption("m"))
+				mu.setWatchFieldMu (ag.getOptionForKey("m"));
+			else 
+				System.out.println("Watch field without MU requested");
+
+		}	
+			
 		System.err.println("starting...");
 		try {
 
