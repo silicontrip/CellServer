@@ -197,7 +197,7 @@ public class mucelliter {
 	}
 
 	
-	protected  HashMap<S2CellId,UniformDistribution> processMulti (HashMap<S2CellId,UniformDistribution> multi)
+	protected  HashMap<S2CellId,UniformDistribution> processMulti (HashMap<S2CellId,UniformDistribution> multi) throws Exception
 	{
 		cursor = table.find().iterator();
 
@@ -230,8 +230,9 @@ public class mucelliter {
 				if (!validateField(multi2,watchField,watchFieldMu))
 				{
 					// the last field causes this field to become invalid
-					System.out.println("invalidates watch field: ["  + doctodt(capturedRegion) + "]");
+					System.out.println("invalidates watch field: " + watchFieldMu + " -> " + muForField(multi2,watchField) + " : ["  + doctodt(capturedRegion) + "] mu: "+entitycontent.get("mu"));
 					// might need to quit at this point
+					throw new Exception("Invalidates Watch Field");
 				}
 			}
 		}
