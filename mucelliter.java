@@ -124,6 +124,7 @@ public class mucelliter {
 
 	protected boolean validateCell(HashMap<S2CellId,UniformDistribution> multi,S2CellId cell)
         {
+		// do we agree with our children
 		if (multi.get(cell) == null)
 			return true; // or should we synthesize one from the children?
                 if (cell.level() < 13)
@@ -138,12 +139,12 @@ public class mucelliter {
                                 ttmu = ttmu.add(mu);
                         }
 
-			try {
+			//try {
 				ttmu.div(4.0).refine(multi.get(cell));
 				return true;
-			} catch (Exception e) {
-				return false;
-			}
+			//} catch (Exception e) {
+				//return false;
+			//}
                 }
                 return true;  // we don't have children of level 13 cells
         }
@@ -169,7 +170,7 @@ public class mucelliter {
 		for (S2CellId cell: multi.keySet())
 		{
 			S2CellId parent = cell.parent();
-			UniformDistribution parentMu = multi.get(parent);
+			UniformDistribution parentMu = multi2.get(parent);
 			if (parentMu != null)
 			{
 			//	System.out.println("Parent Cell: " + parent.toToken() + " mu: " + parentMu);	
@@ -183,7 +184,7 @@ public class mucelliter {
 					{
 						if (!sibling.toToken().equals(siblingo.toToken()))
 						{
-							UniformDistribution cellMu = multi.get(sibling);
+							UniformDistribution cellMu = multi2.get(sibling);
 							if (cellMu==null)
 								totalMu.setLower(0.0);
 							else
@@ -201,12 +202,12 @@ public class mucelliter {
 						nud.refine(totalMu);
 					multi2.put(siblingo,nud);
 				}
-			} else {
+			} 
 				S2CellId sibling = parent.childBegin();
 				UniformDistribution totalMu= new UniformDistribution(0,0);
 				for (int opos =0; opos < 4; ++opos, sibling = sibling.next())
 				{
-					UniformDistribution cellMu = multi.get(sibling);
+					UniformDistribution cellMu = multi2.get(sibling);
 					//System.out.println ("Adding cell: " + sibling.toToken() + " mu: " + cellMu);
 					if (cellMu != null)
 						totalMu = totalMu.add(cellMu);
@@ -220,9 +221,15 @@ public class mucelliter {
 				}
 				//System.out.println("set parent: " + parent.toToken() + " = " + totalMu);
 				if (totalMu.getUpper() > 0)
-					multi2.put(parent,totalMu);
-
-			}
+				{
+					UniformDistribution nud = multi2.get(parent);
+					if (nud == null)
+						nud = totalMu.div(4);
+					else
+						nud.refine(totalMu.div(4));
+					multi2.put(parent,nud);
+				}
+			
 
 		}
 
@@ -271,7 +278,7 @@ public class mucelliter {
 
 			if (!validateCell(multi,cello) || !validateCell(multi,cello.parent()))
 			{
-				System.out.println("cell parent/child conflict: " + cello + " ["  + f + "] mu: " + mu);
+				System.out.println("cell parent/child conflict: " + cello.toToken() + " ["  + toDt(f) + "] mu: " + mu);
 			}
 		}
 	}
@@ -445,26 +452,36 @@ public class mucelliter {
 
 
 			HashMap<S2CellId,UniformDistribution> multi = new HashMap<S2CellId,UniformDistribution> ();
-			HashMap<S2CellId,UniformDistribution> multi2;
-			HashMap<S2CellId,UniformDistribution> multi3;
+			HashMap<S2CellId,UniformDistribution> multi2 = new HashMap<S2CellId,UniformDistribution>();
+			HashMap<S2CellId,UniformDistribution> multi3 = new HashMap<S2CellId,UniformDistribution>();
 			//boolean diff = true;
 				
 			System.err.println("single...");
 
-			multi3 = mu.processSingle();
-			System.err.println("" + multi3.size() + " cells calculated");
-			System.err.println("process cells...");
-			multi2 = mu.processCells(multi3);
-			System.err.println("" + diffCount(multi3,multi2) + " cells updated.");
+			multi2 = mu.processSingle();
+			System.err.println("" + multi2.size() + " cells calculated");
+			while(diffMU(multi3,multi2))
+			{
+				multi3 = multi2;
+				System.err.println("process cells...");
+				multi2 = mu.processCells(multi3);
+				System.err.println("" + multi2.size() + " total " + diffCount(multi3,multi2) + " cells updated.");
+			}
 
 			while (diffMU(multi,multi2)) {
 				multi = multi2;
 				System.err.println("iterating...");
-				multi3 = mu.processMulti(multi);
-			System.err.println("" + multi3.size() + " total " + diffCount(multi,multi3) + " cells updated.");
-				System.err.println("process cells...");
-				multi2 = mu.processCells(multi3);
-			System.err.println("" + multi2.size() + " total " + diffCount(multi3,multi2) + " cells updated.");
+				
+				multi2 = mu.processMulti(multi);
+				System.err.println("" + multi2.size() + " total " + diffCount(multi,multi2) + " cells updated.");
+				multi3 = new HashMap<S2CellId,UniformDistribution>();
+				while(diffMU(multi3,multi2))
+				{
+					multi3 = multi2;
+					System.err.println("process cells...");
+					multi2 = mu.processCells(multi3);
+					System.err.println("" + multi2.size() + " total " + diffCount(multi3,multi2) + " cells updated.");
+				}
 
 			}
 
