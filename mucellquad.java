@@ -12,11 +12,12 @@ public class mucellquad {
         {
                 if (cell.level() < 13)
                 {
-                    S2CellId id = cell.childBegin();
+			S2CellId id = cell.childBegin();
                         UniformDistribution ttmu = new UniformDistribution (0,0);
-                    for (int pos = 0; pos < 4; ++pos, id = id.next())
+			for (int pos = 0; pos < 4; ++pos, id = id.next())
                         {
-                                UniformDistribution mu = cells.get(cell);
+                                UniformDistribution mu = cells.get(id);
+				//System.out.println("getChild: " + id.toToken() + ": " + mu);
                                 if (mu == null)
                                         return null;
                                 ttmu = ttmu.add(mu);
@@ -32,6 +33,8 @@ public class mucellquad {
         UniformDistribution cellmu = cells.get(cell);
         UniformDistribution childmu = getAveChildMU(cell);
 
+	//System.out.println("" + cell.toToken() + ": cellmu: " + cellmu + " child: " + childmu);
+
         if (childmu == null)
                 return cellmu;
         if (cellmu == null)
@@ -44,35 +47,31 @@ public class mucellquad {
 	public void setCells(HashMap<S2CellId,UniformDistribution> c) { cells = c; }
 	public void validate ()
 	{
-		int total = cells.size();
-		int count = 0 ;
-		int timetime = (int)(System.nanoTime() / 1000000000.0);
 
 		for (S2CellId cell: cells.keySet())
 		{
-			UniformDistribution nud = getMU(cell);
-			//System.out.println("" + cells.get(cell) + " <-> " + nud);
+			if (cell.level() < 13)
+			{
+				UniformDistribution nud = getMU(cell);
+			
+		//		System.out.println("" + cell.toToken() + ": " + cells.get(cell) + " <-> " + nud);
 		//cs.putMU(cell,nud);
-			cells.put(cell,nud);
-		count++;
-                        if (timetime != (int)(System.nanoTime() / 1000000000.0))
-                        {
-                                timetime = (int)(System.nanoTime() /1000000000.0);
-                                System.out.println("" + count +"/"+total);
-                        }
+				cells.put(cell,nud);
+			}
 		}
 	}
 
 	public void storeMu(CellServer cs) {
 		for (S2CellId cell: cells.keySet())
 		{
-			UniformDistribution nud = cells.get(cell);
-			UniformDistribution oud = cs.getMU(cell);
-			if (!nud.equals(oud))
-			{
-				System.out.println("" + oud + " -> " + nud);
-				cs.putMU(cell,nud);
-			}
+			
+				UniformDistribution nud = cells.get(cell);
+				UniformDistribution oud = cs.getMU(cell);
+				if (!nud.equals(oud))
+				{
+					System.out.println("" + oud + " -> " + nud);
+					cs.putMU(cell,nud);
+				}
 		}
 	}
 	
