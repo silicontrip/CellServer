@@ -68,8 +68,8 @@ for ff in dt:
 		ts = rec["timestamp"]
 
 		print ts
-		tsl = ts - 800
-		tsu = ts + 800
+		tsl = ts - 900
+		tsu = ts + 900
 		query = { "$and" : [ {"$or" : [ {"data.points": { "$all" :  [ {"$elemMatch" : llE6[0]}, {"$elemMatch" : llE6[1]}]} }, {"data.points": { "$all" :  [ {"$elemMatch" : llE6[1]}, {"$elemMatch" : llE6[2]}]} }, {"data.points": { "$all" :  [ {"$elemMatch" : llE6[2]}, {"$elemMatch" : llE6[0]}]} } ]} , {"timestamp": { "$gt": tsl}}, {"timestamp": { "$lt": tsu}}  ]} 
 		print query
 		res= ingresslog.find(query,None)

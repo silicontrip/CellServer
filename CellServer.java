@@ -152,7 +152,7 @@ public class CellServer
 		Document data = (Document) field.get("data");
 		ArrayList<Document> capturedRegion = (ArrayList<Document>) data.get("points");
 
-		return findSplitField(capturedRegion,searchTime-800, searchTime+800); // this needs to be configurable
+		return findSplitField(capturedRegion,searchTime-850, searchTime+850); // this needs to be configurable
 			
 	}
 
