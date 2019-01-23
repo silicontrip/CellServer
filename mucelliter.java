@@ -160,6 +160,8 @@ public class mucelliter {
 	{
 		HashMap<S2CellId,UniformDistribution> multi2 = new HashMap<S2CellId,UniformDistribution>();
 
+		// parent = (child[1] + child[2] + child[3] + child[4])/4
+
                 // copy multiSet over
                 for (S2CellId cell: multi.keySet())
                         multi2.put(cell, multi.get(cell));
@@ -170,24 +172,57 @@ public class mucelliter {
 			UniformDistribution parentMu = multi.get(parent);
 			if (parentMu != null)
 			{
-				UniformDistribution totalMu = parentMu.mul(4);
-				S2CellId sibling = parent.childBegin();
-				for (int pos = 0; pos < 4; ++pos, sibling = sibling.next())
+			//	System.out.println("Parent Cell: " + parent.toToken() + " mu: " + parentMu);	
+				S2CellId siblingo = parent.childBegin();
+				for (int opos =0; opos < 4; ++opos, siblingo = siblingo.next())
 				{
-					if (!sibling.toToken().equals(cell.toToken()))
+					UniformDistribution totalMu = parentMu.mul(4);
+			//		System.out.println("this Cell: " + siblingo.toToken() + " total MU: " + totalMu);
+					S2CellId sibling = parent.childBegin();
+					for (int pos = 0; pos < 4; ++pos, sibling = sibling.next())
 					{
-						UniformDistribution cellMu = multi.get(sibling);
-						if (cellMu==null)
-							totalMu.setLower(0.0);
-						else
-							totalMu = totalMu.sub(cellMu);
+						if (!sibling.toToken().equals(siblingo.toToken()))
+						{
+							UniformDistribution cellMu = multi.get(sibling);
+							if (cellMu==null)
+								totalMu.setLower(0.0);
+							else
+								totalMu = totalMu.sub(cellMu);
+							totalMu.clampLower(0.0);
+				//			System.out.println("take away cell: " + sibling.toToken() + " mu: " + cellMu + " = " + totalMu);
+						}
+
+					}
+					UniformDistribution nud = multi2.get(siblingo);
+				//	System.out.println("Resulting mu: " + totalMu + " <-> " + nud);
+					if (nud == null)
+						nud = totalMu;
+					else
+						nud.refine(totalMu);
+					multi2.put(siblingo,nud);
+				}
+			} else {
+				S2CellId sibling = parent.childBegin();
+				UniformDistribution totalMu= new UniformDistribution(0,0);
+				for (int opos =0; opos < 4; ++opos, sibling = sibling.next())
+				{
+					UniformDistribution cellMu = multi.get(sibling);
+					//System.out.println ("Adding cell: " + sibling.toToken() + " mu: " + cellMu);
+					if (cellMu != null)
+						totalMu = totalMu.add(cellMu);
+					else
+					{
+						totalMu.setLower(0.0); 
+						totalMu.setUpper(0.0);
+						break;
 					}
 
 				}
-				UniformDistribution nud = multi2.get(cell);
-				nud.refine(totalMu);
-				multi2.put(cell,nud);
-			}	
+				//System.out.println("set parent: " + parent.toToken() + " = " + totalMu);
+				if (totalMu.getUpper() > 0)
+					multi2.put(parent,totalMu);
+
+			}
 
 		}
 
