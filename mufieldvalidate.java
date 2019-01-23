@@ -126,7 +126,7 @@ public class mufieldvalidate
 						if (muEst1.roundAboveZero().contains(muRec2) && muEst2.roundAboveZero().contains(muRec1))
 						{
 							System.out.println ("SWAP");
-							System.out.println("" + splitFields);
+							//System.out.println("" + splitFields);
 
 						//UpdateOptions options = new UpdateOptions().upsert(false);
 						BasicDBObject id;
