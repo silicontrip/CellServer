@@ -23,6 +23,32 @@ public class mucelliter {
 	//HashMap<S2CellId,UniformDistribution> multi; 
 	//HashMap<S2CellId,UniformDistribution> multi2;
 
+	private static String toDt(S2Polygon f)
+	{
+		JSONArray latLngs = new JSONArray();
+		for (int l=0; l<f.numLoops(); l++)
+		{
+			S2Loop pl = f.loop(l);
+			for (int v=0; v< pl.numVertices(); v++)
+			{
+				S2LatLng p = new S2LatLng(pl.vertex(v));
+				JSONObject point = new JSONObject();
+				point.put("lat",p.latDegrees());
+				point.put("lng",p.lngDegrees());
+				latLngs.put(point);
+			}
+		}
+	
+		JSONObject dt = new JSONObject();
+		dt.put("type","polygon");
+		dt.put("latLngs",latLngs);
+		dt.put("color","#a24ac3");
+
+		return dt.toString();
+			
+
+	}
+
 	private static String doctodt(ArrayList<Document> points)
 	{
 		Document vertexA = (Document) points.get(0);
@@ -148,7 +174,7 @@ public class mucelliter {
 				S2CellId sibling = parent.childBegin();
 				for (int pos = 0; pos < 4; ++pos, sibling = sibling.next())
 				{
-					if (!sibling.equals(cell))
+					if (!sibling.toToken().equals(cell.toToken()))
 					{
 						UniformDistribution cellMu = multi.get(sibling);
 						if (cellMu==null)
@@ -158,7 +184,7 @@ public class mucelliter {
 					}
 
 				}
-				UniformDistribution nud = multi.get(cell);
+				UniformDistribution nud = multi2.get(cell);
 				nud.refine(totalMu);
 				multi2.put(cell,nud);
 			}	
@@ -170,7 +196,7 @@ public class mucelliter {
 	}
 
 
-	protected void processField (HashMap<S2CellId,UniformDistribution> multi , HashMap<S2CellId,UniformDistribution> multi2 ,S2Polygon f, UniformDistribution mu)
+	protected void processField (HashMap<S2CellId,UniformDistribution> multi, S2Polygon f, UniformDistribution mu)
 	{
 		S2CellUnion cells = cs.getCellsForField (f);
 		for (S2CellId cello: cells) {
@@ -190,7 +216,7 @@ public class mucelliter {
 			double area = getIntArea(cello,f);
 			score= score.div(area);
 
-			UniformDistribution cellomu = multi2.get(cello);
+			UniformDistribution cellomu = multi.get(cello);
 
 			//update cell
 			if (cellomu == null)
@@ -198,17 +224,17 @@ public class mucelliter {
 			else 
 			{
 				try {
-					UniformDistribution oldcell = new UniformDistribution(cellomu);
+					//UniformDistribution oldcell = new UniformDistribution(cellomu);
 					cellomu.refine(score);
 				} catch (Exception e) {
 					System.err.print(cello.toToken() + " ");
-					System.err.println(e.getMessage() + " : [" + f + "]");
+					System.err.println(e.getMessage() + " : [" + toDt(f) + "]");
 				}
 			}
 			cellomu.clampLower(0.0);
-			multi2.put(cello,cellomu);
+			multi.put(cello,cellomu);
 
-			if (!validateCell(multi2,cello) || !validateCell(multi2,cello.parent()))
+			if (!validateCell(multi,cello) || !validateCell(multi,cello.parent()))
 			{
 				System.out.println("cell parent/child conflict: " + cello + " ["  + f + "] mu: " + mu);
 			}
@@ -297,7 +323,7 @@ public class mucelliter {
 				if (cells.size() > 1)
 				{
 					UniformDistribution  score =  muScore(entitycontent);
-					processField(multi,multi2,thisField,score);
+					processField(multi2,thisField,score);
 				}
 			}
 			// validate field!
